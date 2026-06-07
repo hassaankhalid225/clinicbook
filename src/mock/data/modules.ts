@@ -1,0 +1,68 @@
+import type { ModuleDefinition } from "@/core/types";
+
+export const MOCK_MODULES: ModuleDefinition[] = [
+  {
+    key: "booking",
+    name: "Booking",
+    description: "Accept appointments through your public page.",
+    priceMonthly: 0,
+    status: "active",
+    includedInPlans: ["free", "professional", "business", "enterprise"],
+  },
+  {
+    key: "services",
+    name: "Services",
+    description: "Publish appointment types with durations and prices.",
+    priceMonthly: 0,
+    status: "active",
+    includedInPlans: ["free", "professional", "business", "enterprise"],
+  },
+  {
+    key: "calendar",
+    name: "Calendar",
+    description: "Calendly-style availability and slot management.",
+    priceMonthly: 9,
+    status: "active",
+    includedInPlans: ["professional", "business", "enterprise"],
+  },
+  {
+    key: "reviews",
+    name: "Reviews & Ratings",
+    description: "Collect patient reviews and reply publicly.",
+    priceMonthly: 5,
+    status: "active",
+    includedInPlans: ["professional", "business", "enterprise"],
+  },
+  {
+    key: "expertise",
+    name: "Expertise",
+    description: "Specialties, sub-specialties, skills and procedures.",
+    priceMonthly: 0,
+    status: "active",
+    includedInPlans: ["professional", "business", "enterprise"],
+  },
+  {
+    key: "analytics",
+    name: "Analytics",
+    description: "Booking trends, revenue, and profile insights.",
+    priceMonthly: 15,
+    status: "active",
+    includedInPlans: ["business", "enterprise"],
+  },
+  {
+    key: "messaging",
+    name: "Messaging",
+    description: "Secure chat with patients.",
+    priceMonthly: 12,
+    status: "beta",
+    includedInPlans: ["business", "enterprise"],
+  },
+  {
+    key: "telemedicine",
+    name: "Telemedicine",
+    description: "Built-in video consultations.",
+    priceMonthly: 25,
+    status: "coming_soon",
+    includedInPlans: ["enterprise"],
+  },
+];

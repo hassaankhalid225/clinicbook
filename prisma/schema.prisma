@@ -1,0 +1,230 @@
+// ClinicBook — Prisma schema
+// Backed by Supabase Postgres. Mirrors the schema in the project document (section 12),
+// realized in Prisma. The `doctors.id` equals the Supabase Auth user id.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Plan {
+  free
+  starter
+  practice
+  pro
+}
+
+enum AppointmentStatus {
+  scheduled
+  completed
+  cancelled
+  no_show
+}
+
+enum WaitlistStatus {
+  waiting
+  invited
+  booked
+  expired
+}
+
+enum NotificationChannel {
+  sms
+  email
+}
+
+enum NotificationType {
+  confirmation
+  reminder
+  cancellation
+  waitlist_invite
+}
+
+enum NotificationStatus {
+  sent
+  failed
+  delivered
+}
+
+model Doctor {
+  id                   String   @id @db.Uuid // == Supabase auth user id
+  email                String   @unique @db.VarChar(255)
+  fullName             String   @map("full_name") @db.VarChar(100)
+  slug                 String   @unique @db.VarChar(60)
+  specialty            String?  @db.VarChar(100)
+  clinicName           String?  @map("clinic_name") @db.VarChar(150)
+  clinicAddress        String?  @map("clinic_address")
+  phone                String?  @db.VarChar(20)
+  timezone             String   @default("America/New_York") @db.VarChar(60)
+  avatarUrl            String?  @map("avatar_url")
+  bio                  String?
+  plan                 Plan     @default(free)
+  stripeCustomerId     String?  @map("stripe_customer_id") @db.VarChar(60)
+  stripeSubscriptionId String?  @map("stripe_subscription_id") @db.VarChar(60)
+  isActive             Boolean  @default(true) @map("is_active")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // --- Booking page customization ---
+  welcomeMessage     String? @map("welcome_message")
+  brandColor         String  @default("#0ea5e9") @map("brand_color") @db.VarChar(9)
+  cancellationPolicy String? @map("cancellation_policy")
+  currency           String  @default("USD") @db.VarChar(3)
+  language           String  @default("en") @db.VarChar(5)
+
+  // --- Notifications & reminders ---
+  smsEnabled          Boolean @default(true) @map("sms_enabled")
+  emailEnabled        Boolean @default(true) @map("email_enabled")
+  reminderHoursBefore Int     @default(24) @map("reminder_hours_before") @db.SmallInt
+
+  // --- No-show controls ---
+  requireDeposit Boolean @default(false) @map("require_deposit")
+  depositAmount  Decimal @default(0) @map("deposit_amount") @db.Decimal(10, 2)
+
+  // --- Onboarding ---
+  onboardedAt DateTime? @map("onboarded_at") @db.Timestamptz(6)
+
+  availabilityRules AvailabilityRule[]
+  blockedSlots      BlockedSlot[]
+  appointments      Appointment[]
+  waitlist          Waitlist[]
+  services          Service[]
+
+  @@map("doctors")
+}
+
+model Service {
+  id           String   @id @default(uuid()) @db.Uuid
+  doctorId     String   @map("doctor_id") @db.Uuid
+  name         String   @db.VarChar(100)
+  description  String?
+  durationMin  Int      @default(30) @map("duration_min") @db.SmallInt
+  priceCents   Int      @default(0) @map("price_cents")
+  color        String   @default("#0ea5e9") @db.VarChar(9)
+  isTelehealth Boolean  @default(false) @map("is_telehealth")
+  intakeNote   String?  @map("intake_note")
+  isActive     Boolean  @default(true) @map("is_active")
+  sortOrder    Int      @default(0) @map("sort_order") @db.SmallInt
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  doctor       Doctor        @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([doctorId])
+  @@map("services")
+}
+
+model AvailabilityRule {
+  id              String   @id @default(uuid()) @db.Uuid
+  doctorId        String   @map("doctor_id") @db.Uuid
+  dayOfWeek       Int      @map("day_of_week") @db.SmallInt // 0=Sunday … 6=Saturday
+  startTime       String   @map("start_time") @db.VarChar(5) // "09:00"
+  endTime         String   @map("end_time") @db.VarChar(5) // "17:00"
+  slotDurationMin Int      @default(30) @map("slot_duration_min") @db.SmallInt
+  breakStart      String?  @map("break_start") @db.VarChar(5)
+  breakEnd        String?  @map("break_end") @db.VarChar(5)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, dayOfWeek])
+  @@index([doctorId])
+  @@map("availability_rules")
+}
+
+model BlockedSlot {
+  id          String   @id @default(uuid()) @db.Uuid
+  doctorId    String   @map("doctor_id") @db.Uuid
+  blockedDate DateTime @map("blocked_date") @db.Date
+  startTime   String?  @map("start_time") @db.VarChar(5) // null = full-day block
+  endTime     String?  @map("end_time") @db.VarChar(5)
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId, blockedDate])
+  @@map("blocked_slots")
+}
+
+model Patient {
+  id          String    @id @default(uuid()) @db.Uuid
+  fullName    String    @map("full_name") @db.VarChar(100)
+  email       String?   @db.VarChar(255)
+  phone       String    @db.VarChar(20)
+  dateOfBirth DateTime? @map("date_of_birth") @db.Date
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  appointments Appointment[]
+  waitlist     Waitlist[]
+
+  @@index([phone])
+  @@map("patients")
+}
+
+model Appointment {
+  id              String            @id @default(uuid()) @db.Uuid
+  doctorId        String            @map("doctor_id") @db.Uuid
+  patientId       String            @map("patient_id") @db.Uuid
+  serviceId       String?           @map("service_id") @db.Uuid
+  appointmentDate DateTime          @map("appointment_date") @db.Date
+  startTime       String            @map("start_time") @db.VarChar(5) // "09:30"
+  endTime         String            @map("end_time") @db.VarChar(5)
+  status          AppointmentStatus @default(scheduled)
+  reason          String?
+  isTelehealth    Boolean           @default(false) @map("is_telehealth")
+  videoRoomUrl    String?           @map("video_room_url")
+  cancelToken     String            @unique @default(uuid()) @map("cancel_token") @db.Uuid
+  depositPaid     Decimal?          @map("deposit_paid") @db.Decimal(10, 2)
+  stripePaymentId String?           @map("stripe_payment_id") @db.VarChar(60)
+  notes           String?
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  doctor       Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient      Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  service      Service?          @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  notifications NotificationLog[]
+
+  // Prevents double-booking the same doctor/date/time at the database level.
+  @@unique([doctorId, appointmentDate, startTime])
+  @@index([doctorId, appointmentDate])
+  @@index([cancelToken])
+  @@map("appointments")
+}
+
+model Waitlist {
+  id              String         @id @default(uuid()) @db.Uuid
+  doctorId        String         @map("doctor_id") @db.Uuid
+  patientId       String         @map("patient_id") @db.Uuid
+  preferredDate   DateTime       @map("preferred_date") @db.Date
+  notifiedAt      DateTime?      @map("notified_at") @db.Timestamptz(6)
+  inviteExpiresAt DateTime?      @map("invite_expires_at") @db.Timestamptz(6)
+  status          WaitlistStatus @default(waiting)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId, preferredDate, status])
+  @@map("waitlist")
+}
+
+model NotificationLog {
+  id            String             @id @default(uuid()) @db.Uuid
+  appointmentId String             @map("appointment_id") @db.Uuid
+  channel       NotificationChannel
+  type          NotificationType
+  sentAt        DateTime           @default(now()) @map("sent_at") @db.Timestamptz(6)
+  status        NotificationStatus @default(sent)
+  providerMsgId String?            @map("provider_msg_id") @db.VarChar(80)
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentId])
+  @@map("notifications_log")
+}
