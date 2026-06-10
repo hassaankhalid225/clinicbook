@@ -7,6 +7,7 @@ export const slotsQuerySchema = z.object({
 export const createBookingSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:mm"),
+  serviceId: z.string().uuid().optional().nullable(),
   patientName: z.string().min(2, "Enter your full name").max(100),
   phone: z.string().min(5, "Enter a valid phone number").max(20),
   email: z.string().email("Enter a valid email").optional().or(z.literal("")),

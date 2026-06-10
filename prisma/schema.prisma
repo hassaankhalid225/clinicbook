@@ -51,6 +51,63 @@ enum NotificationStatus {
   delivered
 }
 
+enum UserRole {
+  admin
+  doctor
+  client
+}
+
+enum MarketplaceStatus {
+  pending
+  active
+  suspended
+}
+
+enum ModuleStatus {
+  active
+  beta
+  coming_soon
+}
+
+enum SubscriptionStatus {
+  incomplete
+  active
+  past_due
+  cancelled
+}
+
+enum PaymentKind {
+  module_subscription
+  booking
+}
+
+enum PaymentState {
+  pending
+  succeeded
+  failed
+  refunded
+}
+
+enum PaymentProvider {
+  stripe
+  mock
+}
+
+enum ApptPaymentStatus {
+  unpaid
+  paid
+  refunded
+  waived
+}
+
+enum QueueStatus {
+  waiting
+  in_progress
+  completed
+  skipped
+  cancelled
+}
+
 model Doctor {
   id                   String   @id @db.Uuid // == Supabase auth user id
   email                String   @unique @db.VarChar(255)
@@ -88,11 +145,42 @@ model Doctor {
   // --- Onboarding ---
   onboardedAt DateTime? @map("onboarded_at") @db.Timestamptz(6)
 
+  // --- Multi-tenant + marketplace profile (v2) ---
+  tenantId          String?           @map("tenant_id") @db.Uuid
+  title             String?           @db.VarChar(60)
+  experienceYears   Int               @default(0) @map("experience_years") @db.SmallInt
+  languages         String[]          @default([])
+  certifications    String[]          @default([])
+  subSpecialties    String[]          @default([]) @map("sub_specialties")
+  skills            String[]          @default([])
+  procedures        String[]          @default([])
+  education         Json?
+  awards            Json?
+  social            Json?
+  city              String?           @db.VarChar(80)
+  country           String?           @db.VarChar(80)
+  geoLat            Float?            @map("geo_lat")
+  geoLng            Float?            @map("geo_lng")
+  coverUrl          String?           @map("cover_url")
+  rating            Float             @default(0)
+  reviewCount       Int               @default(0) @map("review_count")
+  profileViews      Int               @default(0) @map("profile_views")
+  featured          Boolean           @default(false)
+  verified          Boolean           @default(false)
+  marketplaceStatus MarketplaceStatus @default(active) @map("marketplace_status")
+
+  tenant            Tenant?             @relation(fields: [tenantId], references: [id])
   availabilityRules AvailabilityRule[]
   blockedSlots      BlockedSlot[]
   appointments      Appointment[]
   waitlist          Waitlist[]
   services          Service[]
+  doctorModules     DoctorModule[]
+  marketReviews     DoctorReview[]
+  queueEntries      QueueEntry[]
+  receipts          Receipt[]
+  payments          Payment[]
+  subscription      TenantSubscription?
 
   @@map("doctors")
 }
@@ -185,10 +273,15 @@ model Appointment {
   notes           String?
   createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
 
+  paymentStatus ApptPaymentStatus @default(unpaid) @map("payment_status")
+
   doctor       Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   patient      Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
   service      Service?          @relation(fields: [serviceId], references: [id], onDelete: SetNull)
   notifications NotificationLog[]
+  payments     Payment[]
+  receipt      Receipt?
+  queueEntry   QueueEntry?
 
   // Prevents double-booking the same doctor/date/time at the database level.
   @@unique([doctorId, appointmentDate, startTime])
@@ -227,4 +320,186 @@ model NotificationLog {
 
   @@index([appointmentId])
   @@map("notifications_log")
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// v2 — Multi-tenant platform: tenants, roles, modules + pricing, billing,
+// receipts, queue, marketplace reviews.
+// ════════════════════════════════════════════════════════════════════════════
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(150)
+  slug      String   @unique @db.VarChar(80)
+  status    String   @default("active") @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  doctors       Doctor[]
+  subscriptions TenantSubscription[]
+
+  @@map("tenants")
+}
+
+/// Maps a Supabase auth user id to a platform role (RBAC anchor).
+model UserProfile {
+  id        String   @id @db.Uuid
+  email     String   @unique @db.VarChar(255)
+  fullName  String   @map("full_name") @db.VarChar(100)
+  role      UserRole
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("user_profiles")
+}
+
+/// Sellable feature module. Admin edits price; history is audited.
+model PlatformModule {
+  id                String       @id @default(uuid()) @db.Uuid
+  key               String       @unique @db.VarChar(40)
+  name              String       @db.VarChar(80)
+  description       String
+  priceMonthlyCents Int          @default(0) @map("price_monthly_cents")
+  isCore            Boolean      @default(false) @map("is_core")
+  status            ModuleStatus @default(active)
+  sortOrder         Int          @default(0) @map("sort_order") @db.SmallInt
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  selections   DoctorModule[]
+  priceHistory ModulePriceHistory[]
+
+  @@map("platform_modules")
+}
+
+model ModulePriceHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  moduleId      String   @map("module_id") @db.Uuid
+  oldPriceCents Int      @map("old_price_cents")
+  newPriceCents Int      @map("new_price_cents")
+  changedBy     String?  @map("changed_by") @db.VarChar(100)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  module PlatformModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([moduleId])
+  @@map("module_price_history")
+}
+
+/// A doctor's selected modules (their composed plan).
+model DoctorModule {
+  id          String   @id @default(uuid()) @db.Uuid
+  doctorId    String   @map("doctor_id") @db.Uuid
+  moduleId    String   @map("module_id") @db.Uuid
+  active      Boolean  @default(true)
+  activatedAt DateTime @default(now()) @map("activated_at") @db.Timestamptz(6)
+
+  doctor Doctor         @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  module PlatformModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, moduleId])
+  @@index([doctorId])
+  @@map("doctor_modules")
+}
+
+model TenantSubscription {
+  id                   String             @id @default(uuid()) @db.Uuid
+  tenantId             String?            @map("tenant_id") @db.Uuid
+  doctorId             String             @unique @map("doctor_id") @db.Uuid
+  status               SubscriptionStatus @default(incomplete)
+  provider             PaymentProvider    @default(mock)
+  stripeCustomerId     String?            @map("stripe_customer_id") @db.VarChar(60)
+  stripeSubscriptionId String?            @map("stripe_subscription_id") @db.VarChar(60)
+  totalMonthlyCents    Int                @default(0) @map("total_monthly_cents")
+  currentPeriodEnd     DateTime?          @map("current_period_end") @db.Timestamptz(6)
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+  doctor Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_subscriptions")
+}
+
+model Payment {
+  id                    String          @id @default(uuid()) @db.Uuid
+  doctorId              String?         @map("doctor_id") @db.Uuid
+  appointmentId         String?         @map("appointment_id") @db.Uuid
+  kind                  PaymentKind
+  status                PaymentState    @default(pending)
+  provider              PaymentProvider
+  amountCents           Int             @map("amount_cents")
+  currency              String          @default("USD") @db.VarChar(3)
+  stripeSessionId       String?         @unique @map("stripe_session_id") @db.VarChar(120)
+  stripePaymentIntentId String?         @map("stripe_payment_intent_id") @db.VarChar(120)
+  createdAt             DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  doctor      Doctor?      @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  receipts    Receipt[]
+
+  @@index([doctorId])
+  @@index([appointmentId])
+  @@map("payments")
+}
+
+model Receipt {
+  id            String            @id @default(uuid()) @db.Uuid
+  receiptNumber String            @unique @map("receipt_number") @db.VarChar(40)
+  appointmentId String            @unique @map("appointment_id") @db.Uuid
+  paymentId     String?           @map("payment_id") @db.Uuid
+  doctorId      String            @map("doctor_id") @db.Uuid
+  patientName   String            @map("patient_name") @db.VarChar(100)
+  items         Json
+  subtotalCents Int               @map("subtotal_cents")
+  taxCents      Int               @default(0) @map("tax_cents")
+  totalCents    Int               @map("total_cents")
+  currency      String            @default("USD") @db.VarChar(3)
+  paymentStatus ApptPaymentStatus @default(unpaid) @map("payment_status")
+  notes         String?
+  issuedAt      DateTime          @default(now()) @map("issued_at") @db.Timestamptz(6)
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  payment     Payment?    @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  doctor      Doctor      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@map("receipts")
+}
+
+/// Daily walk-in/appointment queue with token numbers (rush management).
+model QueueEntry {
+  id            String      @id @default(uuid()) @db.Uuid
+  doctorId      String      @map("doctor_id") @db.Uuid
+  date          DateTime    @db.Date
+  tokenNumber   Int         @map("token_number")
+  appointmentId String?     @unique @map("appointment_id") @db.Uuid
+  patientName   String      @map("patient_name") @db.VarChar(100)
+  status        QueueStatus @default(waiting)
+  checkedInAt   DateTime    @default(now()) @map("checked_in_at") @db.Timestamptz(6)
+  startedAt     DateTime?   @map("started_at") @db.Timestamptz(6)
+  completedAt   DateTime?   @map("completed_at") @db.Timestamptz(6)
+
+  doctor      Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@unique([doctorId, date, tokenNumber])
+  @@index([doctorId, date])
+  @@map("queue_entries")
+}
+
+/// Marketplace reviews (patient-name based; verified when tied to a visit).
+model DoctorReview {
+  id            String    @id @default(uuid()) @db.Uuid
+  doctorId      String    @map("doctor_id") @db.Uuid
+  appointmentId String?   @map("appointment_id") @db.Uuid
+  patientName   String    @map("patient_name") @db.VarChar(100)
+  rating        Int       @db.SmallInt
+  comment       String
+  reply         String?
+  repliedAt     DateTime? @map("replied_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@map("doctor_reviews")
 }

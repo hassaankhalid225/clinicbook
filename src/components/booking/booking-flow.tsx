@@ -18,6 +18,13 @@ interface PublicDoctor {
   clinicName: string | null;
 }
 
+export interface BookableService {
+  id: string;
+  name: string;
+  durationMin: number;
+  priceCents: number;
+}
+
 type Step = "date" | "details" | "done";
 
 interface Confirmation {
@@ -25,9 +32,17 @@ interface Confirmation {
   time: string;
   cancelToken: string;
   isTelehealth: boolean;
+  amountCents: number;
 }
 
-export function BookingFlow({ doctor }: { doctor: PublicDoctor }) {
+export function BookingFlow({
+  doctor,
+  services = [],
+}: {
+  doctor: PublicDoctor;
+  services?: BookableService[];
+}) {
+  const [serviceId, setServiceId] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("date");
   const [date, setDate] = useState<Date | undefined>();
   const [slots, setSlots] = useState<string[]>([]);
@@ -66,6 +81,7 @@ export function BookingFlow({ doctor }: { doctor: PublicDoctor }) {
     const payload = {
       date: dateStr,
       time: slot,
+      serviceId,
       patientName: String(fd.get("patientName") ?? ""),
       phone: String(fd.get("phone") ?? ""),
       email: String(fd.get("email") ?? ""),
@@ -85,6 +101,7 @@ export function BookingFlow({ doctor }: { doctor: PublicDoctor }) {
         time: slot,
         cancelToken: json.data.cancelToken,
         isTelehealth,
+        amountCents: json.data.amountCents ?? 0,
       });
       setStep("done");
     } catch (err) {
@@ -111,6 +128,14 @@ export function BookingFlow({ doctor }: { doctor: PublicDoctor }) {
             <Video className="h-4 w-4" /> A video link will be sent before your
             visit.
           </p>
+        )}
+        {confirmation.amountCents > 0 && (
+          <a
+            href={`/pay/${confirmation.cancelToken}`}
+            className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Pay now — ${(confirmation.amountCents / 100).toFixed(2)}
+          </a>
         )}
         <p className="max-w-sm text-sm text-muted-foreground">
           A confirmation has been sent. Need to cancel? Use the link in your
@@ -195,6 +220,36 @@ export function BookingFlow({ doctor }: { doctor: PublicDoctor }) {
                 {dateStr} at {slot}
               </span>
             </div>
+            {services.length > 0 && (
+              <div className="space-y-2">
+                <Label>Service</Label>
+                <div className="space-y-1.5">
+                  {services.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setServiceId(serviceId === s.id ? null : s.id)}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors hover:border-primary",
+                        serviceId === s.id && "border-primary bg-primary/5 font-medium",
+                      )}
+                    >
+                      <span>
+                        {s.name}
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {s.durationMin} min
+                        </span>
+                      </span>
+                      <span>
+                        {s.priceCents > 0
+                          ? `$${(s.priceCents / 100).toFixed(2)}`
+                          : "Free"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="patientName">Full name</Label>
               <Input id="patientName" name="patientName" required />

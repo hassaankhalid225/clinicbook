@@ -5,9 +5,12 @@
  */
 import type { Role } from "@/core/types";
 
+const PRISMA = (process.env.NEXT_PUBLIC_DATA_SOURCE ?? "mock") === "prisma";
+
 export const MOCK_CURRENT = {
-  doctorId: "d-1", // Dr. Sarah Johnson
-  clientId: "c-1", // Ayesha Khan
+  // Demo doctor: seeded uuid when running on the real DB, mock id otherwise.
+  doctorId: PRISMA ? "00000000-0000-4000-8000-000000000001" : "d-1",
+  clientId: "c-1", // Ayesha Khan (client portal demo)
   adminName: "Platform Admin",
 };
 

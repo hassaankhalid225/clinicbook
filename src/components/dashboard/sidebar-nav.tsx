@@ -13,12 +13,15 @@ import {
   ListChecks,
   Rocket,
   CalendarRange,
+  Activity,
+  Boxes,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/dashboard", label: "Today", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/getting-started", label: "Getting started", icon: Rocket },
+  { href: "/dashboard/queue", label: "Queue", icon: Activity },
   { href: "/dashboard/calendar", label: "Calendar", icon: CalendarRange },
   { href: "/dashboard/appointments", label: "Appointments", icon: CalendarDays },
   { href: "/dashboard/patients", label: "Patients", icon: Users },
@@ -26,6 +29,7 @@ const ITEMS = [
   { href: "/dashboard/availability", label: "Availability", icon: Clock },
   { href: "/dashboard/waitlist", label: "Waitlist", icon: ListChecks },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/modules", label: "Modules & billing", icon: Boxes },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

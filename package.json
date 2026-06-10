@@ -10,9 +10,10 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
-    "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "migrate:new": "tsx scripts/new-migration.ts",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:status": "prisma migrate status",
     "db:seed": "tsx prisma/seed.ts"
   },
   "prisma": {
@@ -45,6 +46,7 @@
     "react-hook-form": "^7.54.2",
     "recharts": "^2.15.0",
     "sonner": "^1.7.1",
+    "stripe": "^22.2.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.1"

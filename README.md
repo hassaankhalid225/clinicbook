@@ -72,12 +72,21 @@ Fill in, at minimum, the Supabase values (`DATABASE_URL`, `DIRECT_URL`,
 Twilio/Resend/Stripe keys are optional — without them, SMS/email are logged to
 the console (stubbed) so the booking flow still works end to end.
 
-### 3. Set up the database
+### 3. Set up the database (proper migrations)
 
 ```bash
 npm run prisma:generate   # generate the Prisma client
-npm run prisma:push       # push the schema to Supabase Postgres
-npm run db:seed           # optional: seed the demo doctor
+npm run migrate:deploy    # apply committed migrations to the database
+npm run db:seed           # seed modules catalog + demo doctors
+```
+
+Evolving the schema (Supabase-safe, no shadow DB needed):
+
+```bash
+# 1. edit prisma/schema.prisma
+npm run migrate:new -- add_my_feature   # diffs live DB → schema into a new migration
+# 2. review the generated SQL
+npm run migrate:deploy                  # apply it
 ```
 
 ### 4. Run
@@ -92,6 +101,27 @@ Open <http://localhost:3000>.
 - **Register a doctor:** `/register`
 - **Doctor dashboard:** `/dashboard`
 - **Public booking page:** `/book/dr-sarah-johnson` (after seeding)
+
+## Payments (Stripe + mock mode)
+
+- Set `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` to enable real payments
+  (module subscriptions via Checkout `mode=subscription`, booking payments via
+  `mode=payment`; webhook at `/api/webhooks/stripe` is the source of truth).
+- Without keys the platform runs in **mock payment mode**: every flow works
+  end-to-end and is recorded with `provider="mock"`.
+- Local webhook testing: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
+
+## Module-based pricing
+
+Doctors compose their own plan at `/dashboard/modules`: select modules
+(price accumulates live) → payment → active subscription. Prices live in
+`platform_modules` and are editable by the admin at `/admin/modules` (every
+change is audited in `module_price_history`). Feature gating via
+`moduleService.hasModule(doctorId, key)`.
+
+New in v2: **Queue & tokens** (`/dashboard/queue` — daily rush board with
+walk-ins and wait estimates) and **printable receipts** (generated from any
+appointment, numbered `RCP-YYYY-NNNNN`, print-ready at `/receipt/[id]`).
 
 ## Key flows
 

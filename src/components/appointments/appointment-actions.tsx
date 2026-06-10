@@ -2,10 +2,36 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, X, CalendarX } from "lucide-react";
+import { Check, X, CalendarX, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 import type { AppointmentStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+
+function ReceiptButton({ appointmentId }: { appointmentId: string }) {
+  const [busy, setBusy] = useState(false);
+  async function open() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/receipts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appointmentId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error?.message ?? "Could not create receipt");
+      window.open(`/receipt/${json.data.id}`, "_blank");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not create receipt");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Button variant="outline" size="sm" disabled={busy} onClick={open}>
+      <ReceiptText className="h-4 w-4" /> Receipt
+    </Button>
+  );
+}
 
 interface Props {
   appointmentId: string;
@@ -40,19 +66,23 @@ export function AppointmentActions({ appointmentId, status }: Props) {
 
   if (status === "cancelled" || status === "completed" || status === "no_show") {
     return (
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={pending !== null}
-        onClick={() => update("scheduled")}
-      >
-        Reopen
-      </Button>
+      <div className="flex flex-wrap justify-end gap-1.5">
+        {status === "completed" && <ReceiptButton appointmentId={appointmentId} />}
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={pending !== null}
+          onClick={() => update("scheduled")}
+        >
+          Reopen
+        </Button>
+      </div>
     );
   }
 
   return (
     <div className="flex flex-wrap gap-1.5">
+      <ReceiptButton appointmentId={appointmentId} />
       <Button
         variant="outline"
         size="sm"

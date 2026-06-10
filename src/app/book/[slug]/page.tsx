@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { MapPin, Stethoscope } from "lucide-react";
 import { doctorService } from "@/modules/doctors/doctor.service";
 import { getPlan } from "@/modules/billing/plans";
+import { prisma } from "@/lib/prisma";
 import {
   Avatar,
   AvatarFallback,
@@ -46,6 +47,12 @@ export default async function PublicBookingPage({
   const { slug } = await params;
   const doctor = await doctorService.findPublicBySlug(slug);
   if (!doctor) notFound();
+
+  const services = await prisma.service.findMany({
+    where: { doctorId: doctor.id, isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: { id: true, name: true, durationMin: true, priceCents: true },
+  });
 
   const branded = getPlan(doctor.plan).branded;
 
@@ -99,6 +106,7 @@ export default async function PublicBookingPage({
                 fullName: doctor.fullName,
                 clinicName: doctor.clinicName,
               }}
+              services={services}
             />
           </CardContent>
         </Card>

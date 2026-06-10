@@ -52,6 +52,14 @@ export const bookingService = {
 
     const endTime = addMinutes(input.time, slotDurationMin);
 
+    // Optional paid service attached to the booking (price/title for payment).
+    let service = null;
+    if (input.serviceId) {
+      service = await prisma.service.findFirst({
+        where: { id: input.serviceId, doctorId: doctor.id, isActive: true },
+      });
+    }
+
     try {
       const appointment = await prisma.$transaction(async (tx) => {
         const patient = await tx.patient.create({
@@ -66,6 +74,7 @@ export const bookingService = {
           data: {
             doctorId: doctor.id,
             patientId: patient.id,
+            serviceId: service?.id ?? null,
             appointmentDate: dateObj,
             startTime: input.time,
             endTime,
@@ -87,6 +96,8 @@ export const bookingService = {
         date: input.date,
         time: input.time,
         doctorName: doctor.fullName,
+        amountCents: service?.priceCents ?? 0,
+        currency: doctor.currency ?? "USD",
       };
     } catch (err) {
       if (

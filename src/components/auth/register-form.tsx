@@ -54,8 +54,8 @@ export function RegisterForm() {
       });
       if (signInError) throw new Error(signInError.message);
 
-      toast.success("Account created — welcome to ClinicBook!");
-      router.push("/dashboard");
+      toast.success("Account created — now compose your plan!");
+      router.push("/dashboard/modules?welcome=1");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
