@@ -13,6 +13,7 @@ const NAV: NavItem[] = [
   { href: "/provider/availability", label: "Availability", icon: "Clock" },
   { href: "/provider/appointments", label: "Appointments", icon: "CalendarDays" },
   { href: "/provider/reviews", label: "Reviews", icon: "Star" },
+  { href: "/provider/pos", label: "POS setup", icon: "Store" },
   { href: "/provider/subscription", label: "Subscription", icon: "CreditCard" },
 ];
 

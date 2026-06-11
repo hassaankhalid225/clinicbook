@@ -23,7 +23,20 @@ const MODULES = [
   { key: "analytics", name: "Analytics", description: "Trends, no-show rates, revenue and peak hours.", priceMonthlyCents: 1500, isCore: false, sortOrder: 7, status: "active" },
   { key: "reviews", name: "Reviews & ratings", description: "Collect patient reviews and reply publicly.", priceMonthlyCents: 800, isCore: false, sortOrder: 8, status: "active" },
   { key: "telehealth", name: "Telehealth video", description: "Built-in video consultations — a room link per visit, no app needed.", priceMonthlyCents: 2500, isCore: false, sortOrder: 9, status: "active" },
+  { key: "pos", name: "POS / Hospital billing", description: "Point-of-sale terminal for the clinic: products, cart checkout, invoices.", priceMonthlyCents: 2000, isCore: false, sortOrder: 10, status: "active" },
 ] as const;
+
+// POS catalog for the demo doctor (name, category, price in cents).
+const POS_PRODUCTS = [
+  { name: "General Consultation", category: "Consultation", priceCents: 6000 },
+  { name: "Follow-up Visit", category: "Consultation", priceCents: 3500 },
+  { name: "Blood Test (CBC)", category: "Lab", priceCents: 2500 },
+  { name: "ECG", category: "Procedure", priceCents: 4000 },
+  { name: "Dressing & Bandage", category: "Procedure", priceCents: 1500 },
+  { name: "Paracetamol (strip)", category: "Pharmacy", priceCents: 300 },
+  { name: "Amoxicillin (course)", category: "Pharmacy", priceCents: 1200 },
+  { name: "Vitamin D Injection", category: "Pharmacy", priceCents: 800 },
+];
 
 interface DocSeed {
   n: number;
@@ -225,6 +238,15 @@ async function main() {
     create: { doctorId: D(1), tenantId: T(1), status: "active", provider: "mock", totalMonthlyCents: total, currentPeriodEnd: new Date(Date.now() + 30 * 86400000) },
   });
   console.log(`Demo subscription for ${DOCTORS[0].fullName}: $${(total / 100).toFixed(2)}/mo`);
+
+  // 5. POS products for the demo doctor (skip if already seeded).
+  const posCount = await prisma.posProduct.count({ where: { doctorId: D(1) } });
+  if (posCount === 0) {
+    await prisma.posProduct.createMany({
+      data: POS_PRODUCTS.map((p) => ({ ...p, doctorId: D(1) })),
+    });
+    console.log(`POS products: ${POS_PRODUCTS.length}`);
+  }
 
   console.log("\nSeed complete.");
   console.log("Marketplace: /doctors · Booking: /book/dr-sarah-johnson");

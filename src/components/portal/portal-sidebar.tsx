@@ -5,13 +5,13 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, User, Briefcase, Sparkles, Clock, CalendarDays,
   Star, CreditCard, Users, Heart, ShieldCheck, Boxes, BarChart3,
-  Stethoscope, Settings,
+  Stethoscope, Settings, Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, User, Briefcase, Sparkles, Clock, CalendarDays, Star,
-  CreditCard, Users, Heart, ShieldCheck, Boxes, BarChart3, Settings,
+  CreditCard, Users, Heart, ShieldCheck, Boxes, BarChart3, Settings, Store,
 };
 
 export interface NavItem {

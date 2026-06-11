@@ -1,7 +1,7 @@
 import { repositories } from "@/core/repositories";
 import { MOCK_CURRENT } from "@/core/utils/session";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ExpertiseForm } from "@/components/provider/expertise-form";
+import { ExpertiseEditor } from "@/components/provider/expertise-editor";
 
 export default async function ProviderExpertisePage() {
   const doctor = await repositories.doctors.getById(MOCK_CURRENT.doctorId);
@@ -13,7 +13,7 @@ export default async function ProviderExpertisePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Expertise</h1>
         <p className="text-muted-foreground">
-          These power discovery filters and your public profile.
+          Add or remove tags — these power discovery filters and your public profile.
         </p>
       </div>
 
@@ -23,13 +23,13 @@ export default async function ProviderExpertisePage() {
           <CardDescription>Help patients find you for the right care.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ExpertiseForm
+          <ExpertiseEditor
             initial={{
-              subSpecialties: e.subSpecialties.join(", "),
-              skills: e.skills.join(", "),
-              procedures: e.procedures.join(", "),
-              certifications: doctor.certifications.join(", "),
-              languages: doctor.languages.join(", "),
+              subSpecialties: e.subSpecialties,
+              skills: e.skills,
+              procedures: e.procedures,
+              certifications: doctor.certifications,
+              languages: doctor.languages,
             }}
           />
         </CardContent>

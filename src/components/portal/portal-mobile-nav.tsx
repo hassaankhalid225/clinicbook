@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Menu, LayoutDashboard, User, Briefcase, Sparkles, Clock, CalendarDays,
-  Star, CreditCard, Users, Heart, ShieldCheck, Boxes, Stethoscope,
+  Star, CreditCard, Users, Heart, ShieldCheck, Boxes, Stethoscope, Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import type { NavItem } from "./portal-sidebar";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard, User, Briefcase, Sparkles, Clock, CalendarDays, Star,
-  CreditCard, Users, Heart, ShieldCheck, Boxes,
+  CreditCard, Users, Heart, ShieldCheck, Boxes, Store,
 };
 
 export function PortalMobileNav({ brand, items }: { brand: string; items: NavItem[] }) {
