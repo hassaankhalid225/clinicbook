@@ -15,6 +15,7 @@ import {
   CalendarRange,
   Activity,
   Boxes,
+  ReceiptText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ const ITEMS = [
   { href: "/dashboard/services", label: "Services", icon: Briefcase },
   { href: "/dashboard/availability", label: "Availability", icon: Clock },
   { href: "/dashboard/waitlist", label: "Waitlist", icon: ListChecks },
+  { href: "/dashboard/receipts", label: "Receipts", icon: ReceiptText },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/modules", label: "Modules & billing", icon: Boxes },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },

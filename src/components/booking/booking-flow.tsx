@@ -33,6 +33,7 @@ interface Confirmation {
   cancelToken: string;
   isTelehealth: boolean;
   amountCents: number;
+  videoUrl?: string | null;
 }
 
 export function BookingFlow({
@@ -102,6 +103,7 @@ export function BookingFlow({
         cancelToken: json.data.cancelToken,
         isTelehealth,
         amountCents: json.data.amountCents ?? 0,
+        videoUrl: json.data.videoUrl,
       });
       setStep("done");
     } catch (err) {
@@ -123,11 +125,15 @@ export function BookingFlow({
             {confirmation.date} at {confirmation.time}
           </span>
         </p>
-        {confirmation.isTelehealth && (
-          <p className="flex items-center gap-2 text-sm text-primary">
-            <Video className="h-4 w-4" /> A video link will be sent before your
-            visit.
-          </p>
+        {confirmation.isTelehealth && confirmation.videoUrl && (
+          <a
+            href={confirmation.videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-md border border-primary px-4 py-2 text-sm font-medium text-primary hover:bg-primary/5"
+          >
+            <Video className="h-4 w-4" /> Join video call
+          </a>
         )}
         {confirmation.amountCents > 0 && (
           <a

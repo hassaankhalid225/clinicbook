@@ -22,7 +22,7 @@ const MODULES = [
   { key: "reminders", name: "SMS & email reminders", description: "Automatic confirmations and 24h reminders.", priceMonthlyCents: 1200, isCore: false, sortOrder: 6, status: "active" },
   { key: "analytics", name: "Analytics", description: "Trends, no-show rates, revenue and peak hours.", priceMonthlyCents: 1500, isCore: false, sortOrder: 7, status: "active" },
   { key: "reviews", name: "Reviews & ratings", description: "Collect patient reviews and reply publicly.", priceMonthlyCents: 800, isCore: false, sortOrder: 8, status: "active" },
-  { key: "telehealth", name: "Telehealth video", description: "Built-in video consultations.", priceMonthlyCents: 2500, isCore: false, sortOrder: 9, status: "coming_soon" },
+  { key: "telehealth", name: "Telehealth video", description: "Built-in video consultations — a room link per visit, no app needed.", priceMonthlyCents: 2500, isCore: false, sortOrder: 9, status: "active" },
 ] as const;
 
 interface DocSeed {

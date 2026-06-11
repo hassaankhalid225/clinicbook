@@ -1,3 +1,4 @@
+import { Video } from "lucide-react";
 import { formatDateOnly } from "@/lib/datetime";
 import {
   Table,
@@ -16,6 +17,7 @@ export interface AppointmentRow {
   startTime: string;
   reason: string | null;
   isTelehealth: boolean;
+  videoRoomUrl?: string | null;
   status: "scheduled" | "completed" | "cancelled" | "no_show";
   patient: { fullName: string; phone: string; email: string | null };
 }
@@ -67,8 +69,20 @@ export function AppointmentTable({
             <TableCell>
               <StatusBadge status={a.status} />
             </TableCell>
-            <TableCell className="text-right">
-              <AppointmentActions appointmentId={a.id} status={a.status} />
+            <TableCell>
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                {a.isTelehealth && a.videoRoomUrl && a.status === "scheduled" && (
+                  <a
+                    href={a.videoRoomUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-9 items-center gap-1 rounded-md border border-primary px-3 text-sm font-medium text-primary hover:bg-primary/5"
+                  >
+                    <Video className="h-4 w-4" /> Join
+                  </a>
+                )}
+                <AppointmentActions appointmentId={a.id} status={a.status} />
+              </div>
             </TableCell>
           </TableRow>
         ))}

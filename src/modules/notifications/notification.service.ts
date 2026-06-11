@@ -37,6 +37,7 @@ export const notificationService = {
       date: appointment.appointmentDate.toISOString().slice(0, 10),
       time: appointment.startTime,
       cancelToken: appointment.cancelToken,
+      videoRoomUrl: appointment.isTelehealth ? appointment.videoRoomUrl : null,
     });
 
     // SMS (always attempted — phone is required).
@@ -80,15 +81,17 @@ function composeMessage(
     date: string;
     time: string;
     cancelToken: string;
+    videoRoomUrl?: string | null;
   },
 ): string {
   const where = ctx.clinicName ? ` at ${ctx.clinicName}` : "";
   const cancelUrl = `${env.appUrl}/cancel/${ctx.cancelToken}`;
+  const video = ctx.videoRoomUrl ? ` Join your video visit: ${ctx.videoRoomUrl}` : "";
   switch (type) {
     case "confirmation":
-      return `Hi ${ctx.patientName}! Your appointment with ${ctx.doctorName} is confirmed for ${ctx.date} at ${ctx.time}${where}. Need to cancel? ${cancelUrl}`;
+      return `Hi ${ctx.patientName}! Your appointment with ${ctx.doctorName} is confirmed for ${ctx.date} at ${ctx.time}${where}.${video} Need to cancel? ${cancelUrl}`;
     case "reminder":
-      return `Reminder: You have an appointment tomorrow with ${ctx.doctorName} at ${ctx.time}. Cancel: ${cancelUrl}`;
+      return `Reminder: You have an appointment tomorrow with ${ctx.doctorName} at ${ctx.time}.${video} Cancel: ${cancelUrl}`;
     case "cancellation":
       return `Your appointment with ${ctx.doctorName} on ${ctx.date} at ${ctx.time} has been cancelled.`;
     case "waitlist_invite":

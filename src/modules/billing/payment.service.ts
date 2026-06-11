@@ -29,6 +29,8 @@ export const paymentService = {
       currency: appt.doctor.currency ?? "USD",
       paymentStatus: appt.paymentStatus,
       status: appt.status,
+      isTelehealth: appt.isTelehealth,
+      videoRoomUrl: appt.videoRoomUrl,
       stripeMode: isStripeConfigured,
     };
   },

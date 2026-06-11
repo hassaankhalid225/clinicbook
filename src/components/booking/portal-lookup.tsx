@@ -12,6 +12,7 @@ interface Appt {
   date: string;
   time: string;
   isTelehealth: boolean;
+  videoRoomUrl?: string | null;
   doctorName: string;
   clinicName: string | null;
   cancelToken: string;
@@ -81,6 +82,13 @@ export function PortalLookup() {
                     </p>
                   </div>
                   <div className="flex gap-2">
+                    {a.isTelehealth && a.videoRoomUrl && (
+                      <Button size="sm" asChild>
+                        <a href={a.videoRoomUrl} target="_blank" rel="noopener noreferrer">
+                          <Video className="h-4 w-4" /> Join
+                        </a>
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" asChild>
                       <Link href={`/reschedule/${a.cancelToken}`}>Reschedule</Link>
                     </Button>

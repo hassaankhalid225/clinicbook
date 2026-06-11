@@ -4,6 +4,7 @@ import { addMinutes, parseDateOnly, formatDateOnly } from "@/lib/datetime";
 import { AppError, ConflictError, NotFoundError } from "@/lib/errors";
 import { getPlan } from "@/modules/billing/plans";
 import { notificationService } from "@/modules/notifications/notification.service";
+import { videoRoomUrl } from "@/lib/video";
 import { computeAvailableSlots } from "./slots.service";
 import type { CreateBookingInput, JoinWaitlistInput } from "./booking.schema";
 
@@ -85,6 +86,16 @@ export const bookingService = {
         });
       });
 
+      // Telehealth → generate a video room for the visit.
+      let videoUrl = appointment.videoRoomUrl;
+      if (appointment.isTelehealth) {
+        videoUrl = videoRoomUrl(appointment.id);
+        await prisma.appointment.update({
+          where: { id: appointment.id },
+          data: { videoRoomUrl: videoUrl },
+        });
+      }
+
       // Fire-and-forget confirmation (logged; real send when integrations set).
       await notificationService.sendConfirmation(appointment.id).catch(() => {});
 
@@ -92,7 +103,7 @@ export const bookingService = {
         appointmentId: appointment.id,
         status: appointment.status,
         cancelToken: appointment.cancelToken,
-        videoUrl: appointment.videoRoomUrl,
+        videoUrl,
         date: input.date,
         time: input.time,
         doctorName: doctor.fullName,
@@ -128,6 +139,7 @@ export const bookingService = {
       time: a.startTime,
       status: a.status,
       isTelehealth: a.isTelehealth,
+      videoRoomUrl: a.videoRoomUrl,
       doctorName: a.doctor.fullName,
       clinicName: a.doctor.clinicName,
       cancelToken: a.cancelToken,
