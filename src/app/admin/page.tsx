@@ -1,38 +1,33 @@
 import { Users, Stethoscope, CalendarCheck, DollarSign } from "lucide-react";
 import { repositories } from "@/core/repositories";
+import { adminBillingService } from "@/modules/billing/admin-stats.service";
 import { money } from "@/core/utils/format";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DailyTrendChart, StatusPie } from "@/components/analytics/report-charts";
 
 export default async function AdminDashboard() {
-  const [allDoctors, clients, totalAppts] = await Promise.all([
+  const [allDoctors, clients, totalAppts, billing] = await Promise.all([
     repositories.doctors.listAll(),
     repositories.clients.list(),
     repositories.appointments.countAll(),
+    adminBillingService.overview(),
   ]);
-
-  // Aggregate revenue across mock subscriptions (monthly).
-  const subs = await Promise.all(allDoctors.map((d) => repositories.subscriptions.getForDoctor(d.id)));
-  const plans = await repositories.subscriptions.plans();
-  const planPrice = new Map(plans.map((p) => [p.id, p.priceMonthly]));
-  const mrr = subs.reduce((s, sub) => s + (sub ? (planPrice.get(sub.planId) ?? 0) : 0), 0);
 
   const stats = [
     { label: "Total doctors", value: allDoctors.length, icon: Stethoscope },
     { label: "Total clients", value: clients.length, icon: Users },
     { label: "Active bookings", value: totalAppts, icon: CalendarCheck },
-    { label: "MRR", value: money(mrr * 100), icon: DollarSign },
+    { label: "MRR", value: money(billing.mrrCents), icon: DollarSign },
   ];
 
-  // Mock platform growth + plan distribution.
+  // Platform growth (illustrative trend) + real module-revenue distribution.
   const growth = Array.from({ length: 12 }, (_, i) => ({
     date: `M${i + 1}`,
     count: Math.round(10 + i * 8 + (i % 3) * 4),
   }));
-  const planDist = plans.map((p) => ({
-    name: p.name,
-    value: subs.filter((s) => s?.planId === p.id).length,
-  }));
+  const moduleDist = billing.moduleStats
+    .filter((m) => !m.isCore && m.doctors > 0)
+    .map((m) => ({ name: m.name, value: m.doctors }));
 
   return (
     <div className="space-y-8">
@@ -65,9 +60,10 @@ export default async function AdminDashboard() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Plan distribution</CardTitle>
+            <CardTitle>Module adoption</CardTitle>
+            <CardDescription>Paid modules by doctor count</CardDescription>
           </CardHeader>
-          <CardContent><StatusPie data={planDist} /></CardContent>
+          <CardContent><StatusPie data={moduleDist} /></CardContent>
         </Card>
       </div>
     </div>

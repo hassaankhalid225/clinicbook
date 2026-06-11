@@ -1,6 +1,5 @@
 import { requireDoctor } from "@/lib/auth";
 import { env } from "@/lib/env";
-import { PUBLIC_PLANS } from "@/modules/billing/plans";
 import { SettingsTabs } from "@/components/dashboard/settings-tabs";
 
 export default async function SettingsPage() {
@@ -18,12 +17,6 @@ export default async function SettingsPage() {
 
       <SettingsTabs
         bookingUrl={bookingUrl}
-        plans={PUBLIC_PLANS.map((p) => ({
-          id: p.id,
-          name: p.name,
-          priceMonthly: p.priceMonthly,
-          features: p.features,
-        }))}
         settings={{
           fullName: doctor.fullName,
           specialty: doctor.specialty,

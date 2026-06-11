@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -39,13 +38,6 @@ export interface DoctorSettings {
   plan: string;
 }
 
-interface PlanCard {
-  id: string;
-  name: string;
-  priceMonthly: number;
-  features: string[];
-}
-
 async function patch(body: Record<string, unknown>): Promise<boolean> {
   const res = await fetch("/api/doctor/me", {
     method: "PUT",
@@ -62,11 +54,9 @@ async function patch(body: Record<string, unknown>): Promise<boolean> {
 
 export function SettingsTabs({
   settings,
-  plans,
   bookingUrl,
 }: {
   settings: DoctorSettings;
-  plans: PlanCard[];
   bookingUrl: string;
 }) {
   const router = useRouter();
@@ -244,53 +234,19 @@ export function SettingsTabs({
       <TabsContent value="billing">
         <Card>
           <CardHeader>
-            <CardTitle>Subscription</CardTitle>
+            <CardTitle>Billing is module-based</CardTitle>
             <CardDescription>
-              Current plan:{" "}
-              <Badge variant="secondary" className="ml-1 capitalize">
-                {s.plan}
-              </Badge>
+              You compose your own plan by selecting modules — pay only for what
+              you use, and change it anytime.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {plans.map((p) => {
-                const current = p.id === s.plan;
-                return (
-                  <div
-                    key={p.id}
-                    className={`rounded-lg border p-4 ${current ? "border-primary bg-primary/5" : ""}`}
-                  >
-                    <p className="font-semibold">{p.name}</p>
-                    <p className="my-1 text-2xl font-bold">
-                      ${p.priceMonthly}
-                      <span className="text-sm font-normal text-muted-foreground">/mo</span>
-                    </p>
-                    <ul className="my-3 space-y-1 text-xs text-muted-foreground">
-                      {p.features.map((f) => (
-                        <li key={f} className="flex gap-1">
-                          <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      size="sm"
-                      variant={current ? "outline" : "default"}
-                      className="w-full"
-                      disabled={current}
-                      onClick={() => toast.info("Stripe checkout is wired in the roadmap.")}
-                    >
-                      {current ? "Current plan" : "Upgrade"}
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="mt-4 text-xs text-muted-foreground">
-              Payments via Stripe are part of the roadmap — plan changes are
-              simulated here.
-            </p>
+            <a
+              href="/dashboard/modules"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              <Check className="h-4 w-4" /> Manage modules &amp; billing
+            </a>
           </CardContent>
         </Card>
       </TabsContent>

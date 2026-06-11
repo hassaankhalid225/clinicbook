@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import { repositories } from "@/core/repositories";
 import { MOCK_CATEGORIES, MOCK_TESTIMONIALS, MOCK_FAQS, HOW_IT_WORKS } from "@/mock/data/content";
-import { MOCK_PLANS } from "@/mock/data/plans";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,10 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 export default async function LandingPage() {
-  const featured = await repositories.doctors.featured(4);
+  const [featured, modules] = await Promise.all([
+    repositories.doctors.featured(4),
+    repositories.modules.list(),
+  ]);
 
   return (
     <>
@@ -140,36 +142,37 @@ export default async function LandingPage() {
 
       {/* PRICING */}
       <section id="pricing" className="container py-16">
-        <SectionHeading title="Simple, flat pricing for doctors" subtitle="No per-booking fees. Cancel anytime." />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {MOCK_PLANS.map((p) => (
-            <Card key={p.id} className={p.highlighted ? "border-primary shadow-md" : ""}>
-              <CardHeader>
-                {p.highlighted && <Badge className="mb-2 w-fit">Most popular</Badge>}
-                <CardTitle>{p.name}</CardTitle>
-                <div className="mt-2 text-3xl font-bold">
-                  ${p.priceMonthly}
-                  <span className="text-base font-normal text-muted-foreground">/mo</span>
-                </div>
-                <p className="text-sm text-muted-foreground">{p.description}</p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <ul className="space-y-2 text-sm">
-                  {p.modules.map((m) => (
-                    <li key={m} className="flex items-center gap-2 capitalize">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
-                      {m}
-                    </li>
-                  ))}
-                </ul>
-                <Button className="w-full" variant={p.highlighted ? "default" : "outline"} asChild>
-                  <Link href="/auth/login?role=doctor">
-                    {p.priceMonthly === 0 ? "Start free" : "Choose plan"}
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+        <SectionHeading
+          title="Composable pricing — pay only for what you use"
+          subtitle="No per-booking fees. Start free with core scheduling, then add modules as you grow."
+        />
+        <div className="mx-auto grid max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {modules.map((m) => {
+            const free = m.priceMonthly === 0;
+            return (
+              <Card key={m.key} className={free ? "border-primary/40" : ""}>
+                <CardContent className="flex items-start justify-between gap-3 p-5">
+                  <div>
+                    <p className="font-semibold">{m.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{m.description}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    {free ? (
+                      <Badge variant="secondary">Included</Badge>
+                    ) : (
+                      <span className="font-semibold">${m.priceMonthly}<span className="text-xs font-normal text-muted-foreground">/mo</span></span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <Button size="lg" asChild>
+            <Link href="/auth/login?role=doctor">Start free &amp; compose your plan</Link>
+          </Button>
+          <p className="text-sm text-muted-foreground">Core scheduling &amp; booking are always free.</p>
         </div>
       </section>
 
