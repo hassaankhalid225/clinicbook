@@ -1,10 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Stethoscope, User, Shield, Mail, Chrome, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import { signInAs } from "@/app/auth/actions";
 import type { Role } from "@/core/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,13 +12,27 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function LoginTabs({ defaultRole = "client" }: { defaultRole?: Role }) {
-  const [pending, startTransition] = useTransition();
+  const [busy, setBusy] = useState(false);
 
-  function enter(role: Role) {
-    toast.success(`Signed in as ${role} (demo)`);
-    startTransition(() => signInAs(role));
+  async function enter(role: Role) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error("Sign-in failed");
+      toast.success(`Signed in as ${role}`);
+      // Full navigation guarantees the fresh build is loaded.
+      window.location.href = json.data.home;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sign-in failed");
+      setBusy(false);
+    }
   }
-  void pending;
 
   return (
     <Tabs defaultValue={defaultRole} className="w-full">

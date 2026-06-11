@@ -1,9 +1,7 @@
-import { LogOut } from "lucide-react";
-import { signOut } from "@/app/auth/actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PortalMobileNav } from "@/components/portal/portal-mobile-nav";
+import { LogoutButton } from "@/components/portal/logout-button";
 import type { NavItem } from "@/components/portal/portal-sidebar";
 
 export function PortalHeader({
@@ -29,11 +27,7 @@ export function PortalHeader({
         <span className="hidden text-sm text-muted-foreground sm:inline">{userName}</span>
         {notifications}
         <ThemeToggle />
-        <form action={signOut}>
-          <Button variant="outline" size="sm" type="submit">
-            <LogOut className="h-4 w-4" /> Log out
-          </Button>
-        </form>
+        <LogoutButton />
       </div>
     </header>
   );
