@@ -1,10 +1,12 @@
 import { requireDoctor } from "@/lib/auth";
 import { env } from "@/lib/env";
+import { integrationStatus } from "@/lib/integrations";
 import { SettingsTabs } from "@/components/dashboard/settings-tabs";
 
 export default async function SettingsPage() {
   const doctor = await requireDoctor();
   const bookingUrl = `${env.appUrl}/book/${doctor.slug}`;
+  const integrations = integrationStatus();
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -17,6 +19,7 @@ export default async function SettingsPage() {
 
       <SettingsTabs
         bookingUrl={bookingUrl}
+        integrations={integrations}
         settings={{
           fullName: doctor.fullName,
           specialty: doctor.specialty,

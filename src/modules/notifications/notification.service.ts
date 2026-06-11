@@ -1,14 +1,22 @@
 import type { NotificationType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
+import { buildIcs } from "@/lib/ics";
+
+interface EmailAttachment {
+  filename: string;
+  content: string; // base64
+  contentType?: string;
+}
 
 /**
  * Notification service. Records every send attempt to `notifications_log`.
  *
- * SMS (Twilio) and email (Resend) sends are stubbed: when the relevant
- * integration env vars are absent, the message is composed and logged but not
- * dispatched, so the booking flow works end-to-end without external accounts.
- * Wiring the real providers means filling in the two `dispatch*` helpers.
+ * SMS (Twilio) and email (Resend) are dispatched via each provider's REST API
+ * when keys are configured; without keys the message is composed and logged
+ * (mock mode), so every flow works end-to-end with no external accounts.
+ * Paste the Twilio/Resend keys into .env and real delivery turns on — no code
+ * change needed.
  */
 export const notificationService = {
   async sendConfirmation(appointmentId: string) {
@@ -54,10 +62,35 @@ export const notificationService = {
 
     // Email (only when the patient gave one).
     if (appointment.patient.email) {
+      // Attach a calendar invite to confirmations.
+      let attachments: EmailAttachment[] | undefined;
+      if (type === "confirmation") {
+        const ics = buildIcs({
+          uid: appointment.id,
+          date: appointment.appointmentDate.toISOString().slice(0, 10),
+          startTime: appointment.startTime,
+          endTime: appointment.endTime,
+          summary: `Appointment with ${appointment.doctor.fullName}`,
+          description: appointment.isTelehealth && appointment.videoRoomUrl
+            ? `Telehealth visit. Join: ${appointment.videoRoomUrl}`
+            : appointment.reason ?? "",
+          location: appointment.isTelehealth
+            ? appointment.videoRoomUrl ?? "Online"
+            : appointment.doctor.clinicAddress ?? appointment.doctor.clinicName ?? "",
+        });
+        attachments = [
+          {
+            filename: "appointment.ics",
+            content: Buffer.from(ics).toString("base64"),
+            contentType: "text/calendar",
+          },
+        ];
+      }
       const emailResult = await dispatchEmail(
         appointment.patient.email,
         `ClinicBook — ${type}`,
         message,
+        attachments,
       );
       await prisma.notificationLog.create({
         data: {
@@ -99,27 +132,73 @@ function composeMessage(
   }
 }
 
+/** Sends an SMS via the Twilio REST API. Mock-logs when keys are absent. */
 async function dispatchSms(
   to: string,
   body: string,
 ): Promise<{ ok: boolean; id?: string }> {
-  if (!env.twilio.accountSid || !env.twilio.authToken) {
-    console.info(`[sms:stub] → ${to}: ${body}`);
-    return { ok: true, id: "stub-sms" };
+  const { accountSid, authToken, fromNumber } = env.twilio;
+  if (!accountSid || !authToken || !fromNumber) {
+    console.info(`[sms:mock] → ${to}: ${body}`);
+    return { ok: true, id: "mock-sms" };
   }
-  // Real Twilio dispatch would go here.
-  return { ok: true };
+  try {
+    const res = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            "Basic " + Buffer.from(`${accountSid}:${authToken}`).toString("base64"),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ To: to, From: fromNumber, Body: body }),
+      },
+    );
+    const json = (await res.json()) as { sid?: string; message?: string };
+    if (!res.ok) console.error("[sms:twilio] failed:", json.message);
+    return { ok: res.ok, id: json.sid };
+  } catch (err) {
+    console.error("[sms:twilio] error:", err);
+    return { ok: false };
+  }
 }
 
+/** Sends an email via the Resend REST API. Mock-logs when the key is absent. */
 async function dispatchEmail(
   to: string,
   subject: string,
   body: string,
+  attachments?: EmailAttachment[],
 ): Promise<{ ok: boolean; id?: string }> {
   if (!env.resend.apiKey) {
-    console.info(`[email:stub] → ${to} (${subject}): ${body}`);
-    return { ok: true, id: "stub-email" };
+    console.info(`[email:mock] → ${to} (${subject}): ${body}`);
+    return { ok: true, id: "mock-email" };
   }
-  // Real Resend dispatch would go here.
-  return { ok: true };
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.resend.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.resend.from,
+        to,
+        subject,
+        text: body,
+        attachments: attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          content_type: a.contentType,
+        })),
+      }),
+    });
+    const json = (await res.json()) as { id?: string; message?: string };
+    if (!res.ok) console.error("[email:resend] failed:", json.message);
+    return { ok: res.ok, id: json.id };
+  } catch (err) {
+    console.error("[email:resend] error:", err);
+    return { ok: false };
+  }
 }

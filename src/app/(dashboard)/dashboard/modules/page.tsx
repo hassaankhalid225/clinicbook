@@ -3,6 +3,7 @@ import { moduleService } from "@/modules/billing/module.service";
 import { money } from "@/core/utils/format";
 import { Badge } from "@/components/ui/badge";
 import { ModulePicker, type PickerModule } from "@/components/billing/module-picker";
+import { ManageBillingButton } from "@/components/billing/manage-billing-button";
 
 export default async function ModulesPage({
   searchParams,
@@ -35,12 +36,16 @@ export default async function ModulesPage({
           </Badge>
         )}
         {subActive && summary.subscription && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Active subscription: <strong>{money(summary.subscription.totalMonthlyCents)}/mo</strong>
-            {" · "}provider: {summary.subscription.provider}
-            {summary.subscription.currentPeriodEnd &&
-              ` · renews ${summary.subscription.currentPeriodEnd.toISOString().slice(0, 10)}`}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <p className="text-sm text-muted-foreground">
+              Active subscription: <strong>{money(summary.subscription.totalMonthlyCents)}/mo</strong>
+              {" · "}provider: {summary.subscription.provider}
+              {summary.subscription.currentPeriodEnd &&
+                ` · renews ${summary.subscription.currentPeriodEnd.toISOString().slice(0, 10)}`}
+            </p>
+            {summary.subscription.provider === "stripe" &&
+              summary.subscription.stripeCustomerId && <ManageBillingButton />}
+          </div>
         )}
       </div>
 

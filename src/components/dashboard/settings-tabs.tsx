@@ -52,12 +52,21 @@ async function patch(body: Record<string, unknown>): Promise<boolean> {
   return true;
 }
 
+export interface IntegrationStatus {
+  sms: boolean;
+  email: boolean;
+  stripe: boolean;
+  video: boolean;
+}
+
 export function SettingsTabs({
   settings,
   bookingUrl,
+  integrations,
 }: {
   settings: DoctorSettings;
   bookingUrl: string;
+  integrations: IntegrationStatus;
 }) {
   const router = useRouter();
   const [s, setS] = useState(settings);
@@ -82,6 +91,7 @@ export function SettingsTabs({
     <Tabs defaultValue="profile">
       <TabsList className="mb-4 flex-wrap">
         <TabsTrigger value="profile">Profile</TabsTrigger>
+        <TabsTrigger value="integrations">Integrations</TabsTrigger>
         <TabsTrigger value="booking">Booking page</TabsTrigger>
         <TabsTrigger value="notifications">Notifications</TabsTrigger>
         <TabsTrigger value="billing">Billing</TabsTrigger>
@@ -250,7 +260,78 @@ export function SettingsTabs({
           </CardContent>
         </Card>
       </TabsContent>
+
+      {/* INTEGRATIONS */}
+      <TabsContent value="integrations">
+        <Card>
+          <CardHeader>
+            <CardTitle>Integrations</CardTitle>
+            <CardDescription>
+              Connection status. Add the keys to your environment once and these
+              light up automatically — no redeploy of features needed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <IntegrationRow
+              label="SMS (Twilio)"
+              desc="Confirmations & reminders by text."
+              connected={integrations.sms}
+              keys="TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER"
+            />
+            <IntegrationRow
+              label="Email (Resend)"
+              desc="Confirmations, reminders & calendar invites."
+              connected={integrations.email}
+              keys="RESEND_API_KEY"
+            />
+            <IntegrationRow
+              label="Payments (Stripe)"
+              desc="Module subscriptions & booking payments."
+              connected={integrations.stripe}
+              keys="STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET"
+            />
+            <IntegrationRow
+              label="Telehealth video (Jitsi)"
+              desc="Video rooms per visit — works with no key."
+              connected={integrations.video}
+              keys="NEXT_PUBLIC_VIDEO_BASE (optional)"
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
     </Tabs>
+  );
+}
+
+function IntegrationRow({
+  label,
+  desc,
+  connected,
+  keys,
+}: {
+  label: string;
+  desc: string;
+  connected: boolean;
+  keys: string;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-md border p-3">
+      <div>
+        <p className="font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{desc}</p>
+        {!connected && (
+          <p className="mt-1 font-mono text-[11px] text-muted-foreground">{keys}</p>
+        )}
+      </div>
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+          connected ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"
+        }`}
+      >
+        <span className={`h-2 w-2 rounded-full ${connected ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+        {connected ? "Connected" : "Mock mode"}
+      </span>
+    </div>
   );
 }
 

@@ -207,6 +207,26 @@ export const moduleService = {
     return { totalMonthlyCents };
   },
 
+  /**
+   * Creates a Stripe Customer Portal session so a doctor can update their card,
+   * view invoices, or cancel — Stripe-hosted. Requires a real Stripe customer
+   * (exists after the first live checkout).
+   */
+  async billingPortalUrl(doctorId: string): Promise<string> {
+    if (!isStripeConfigured) {
+      throw new AppError("Stripe is not configured yet", 400);
+    }
+    const sub = await prisma.tenantSubscription.findUnique({ where: { doctorId } });
+    if (!sub?.stripeCustomerId) {
+      throw new AppError("No Stripe customer for this account yet", 400);
+    }
+    const session = await getStripe().billingPortal.sessions.create({
+      customer: sub.stripeCustomerId,
+      return_url: `${env.appUrl}/dashboard/modules`,
+    });
+    return session.url;
+  },
+
   /** Admin: edit a module's price (audited). */
   async updatePrice(moduleId: string, newPriceCents: number, changedBy?: string) {
     const module = await prisma.platformModule.findUnique({ where: { id: moduleId } });
